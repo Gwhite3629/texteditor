@@ -11,19 +11,19 @@ use crossterm::{
 };
 
 fn main() -> Result<()> {
-    let mut out = stdout();
-
     // Enable enhancement flags
     execute!(
-        out,
-        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES),
-        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES)
+        stdout(),
+        PushKeyboardEnhancementFlags(
+            KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+                | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
+        )
     )?;
 
     color_eyre::install()?;
     let mut terminal = ratatui::init();
     let app_result = App::default().run(&mut terminal);
     ratatui::restore();
-    execute!(out, PopKeyboardEnhancementFlags)?;
+    execute!(stdout(), PopKeyboardEnhancementFlags)?;
     app_result
 }

@@ -1,12 +1,7 @@
-use crossterm::event::{
-    self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, ModifierKeyCode,
-};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, ModifierKeyCode};
 use ratatui::{DefaultTerminal, Frame, text::Line};
 
-use color_eyre::{
-    Result,
-    eyre::{WrapErr, bail},
-};
+use color_eyre::{Result, eyre::WrapErr};
 
 use crate::app::{
     AppProperties,
@@ -54,12 +49,15 @@ impl App {
                     self.text.push(Line::from("Command"));
                     self.state = Default::default();
                 }
-                KeyCode::Modifier(ModifierKeyCode::LeftControl) => {
-                    self.cmdbuf.clear();
-                    self.text.clear();
-                    self.text.push(Line::from("MultiCommand"));
-                    self.state = MULTICOMMAND
-                } // Begin multi-key command
+                KeyCode::Modifier(modifier) => match modifier {
+                    ModifierKeyCode::LeftControl => {
+                        self.cmdbuf.clear();
+                        self.text.clear();
+                        self.text.push(Line::from("MultiCommand"));
+                        self.state = MULTICOMMAND;
+                    } // Begin multi-key command
+                    _ => {}
+                },
                 KeyCode::Char('q') => self.exit(), // Run exit function
                 KeyCode::Char('e') => {
                     self.text.clear();
