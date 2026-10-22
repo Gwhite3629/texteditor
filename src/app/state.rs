@@ -4,7 +4,10 @@ pub enum AppState {
     #[default]
     SIMPLECOMMAND,
     MULTICOMMAND,
-    EDIT,
+    SELECT,
+    UNSELECT,
+    MOVE,
+    TEXT,
 }
 
 #[derive(Debug, Default)]
