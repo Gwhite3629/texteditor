@@ -6,7 +6,7 @@ use color_eyre::{Result, eyre::WrapErr};
 use crate::app::{
     AppProperties,
     AppState::{self, MOVE, MULTICOMMAND, SELECT, SIMPLECOMMAND, TEXT},
-    DynamicText, highlight, insert,
+    DynamicText, highlight, insert, load_file, parse_conf,
     text::Coordinate,
 };
 
@@ -15,13 +15,20 @@ pub struct App {
     pub status_text: Vec<Line<'static>>, // Placeholder for text object
     pub cmdbuf: Vec<KeyCode>,            // Current multi-key command buffer
     pub text: DynamicText,
-    state: AppState,     // Current mutable app state
-    prop: AppProperties, // Immutable session properties
-    exit: bool,          // Is-exiting flag
+    state: AppState,         // Current mutable app state
+    pub prop: AppProperties, // Immutable session properties
+    pub fname: String,
+    exit: bool, // Is-exiting flag
 }
 
 impl App {
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+    pub fn run(&mut self, terminal: &mut DefaultTerminal, cmd: Vec<String>) -> Result<()> {
+        // Initial setup.
+        parse_conf(cmd, self)?;
+        if !self.fname.is_empty() {
+            load_file(self)?;
+        }
+
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events().wrap_err("handle events failed")?;
@@ -242,6 +249,7 @@ impl Default for App {
             text: DynamicText::default(),
             state: AppState::default(),
             prop: AppProperties::default(),
+            fname: String::new(),
             exit: false,
         }
     }

@@ -1,6 +1,6 @@
 pub mod app;
 
-use std::io::stdout;
+use std::{env, io::stdout};
 
 use app::App;
 
@@ -11,6 +11,7 @@ use crossterm::{
 };
 
 fn main() -> Result<()> {
+    let args: Vec<String> = env::args().collect();
     // Enable enhancement flags
     execute!(
         stdout(),
@@ -22,7 +23,7 @@ fn main() -> Result<()> {
 
     color_eyre::install()?;
     let mut terminal = ratatui::init();
-    let app_result = App::default().run(&mut terminal);
+    let app_result = App::default().run(&mut terminal, args);
     ratatui::restore();
     execute!(stdout(), PopKeyboardEnhancementFlags)?;
     app_result

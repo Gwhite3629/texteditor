@@ -68,7 +68,7 @@ impl Widget for &App {
                     );
                     lines.push(Line::from(vec![
                         Span::styled(n1.to_string(), Style::default()),
-                        Span::styled(h.to_string(), Style::default().fg(Color::Yellow)),
+                        Span::styled(h.to_string(), Style::default().bg(Color::Yellow)),
                         Span::styled(n2.to_string(), Style::default()),
                     ]));
                     continue;
@@ -77,7 +77,7 @@ impl Widget for &App {
                     let (non, h) = l.split_at_mut(self.text.highlight.p1.x as usize);
                     lines.push(Line::from(vec![
                         Span::styled(non.to_string(), Style::default()),
-                        Span::styled(h.to_string(), Style::default().fg(Color::Yellow)),
+                        Span::styled(h.to_string(), Style::default().bg(Color::Yellow)),
                     ]));
                     continue;
                 } else if (i > self.text.highlight.p1.y as usize)
@@ -86,14 +86,14 @@ impl Widget for &App {
                     // Middle lines of highlight span
                     lines.push(Line::from(vec![Span::styled(
                         l,
-                        Style::default().fg(Color::Yellow),
+                        Style::default().bg(Color::Yellow),
                     )]));
                     continue;
                 } else if i == self.text.highlight.p2.y as usize {
                     // Finishing line of highlighting span
                     let (h, non) = l.split_at_mut(self.text.highlight.p2.x as usize);
                     lines.push(Line::from(vec![
-                        Span::styled(h.to_string(), Style::default().fg(Color::Yellow)),
+                        Span::styled(h.to_string(), Style::default().bg(Color::Yellow)),
                         Span::styled(non.to_string(), Style::default()),
                     ]));
                     continue;

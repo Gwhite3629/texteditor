@@ -91,9 +91,9 @@ impl Default for Coordinate {
 #[derive(Debug)]
 pub struct CursorPos {
     line_number: usize,
-    max_line_number: usize,
+    pub max_line_number: usize,
     character: usize,
-    max_character: usize,
+    pub max_character: usize,
     pos: Coordinate,
 }
 
@@ -106,7 +106,7 @@ pub struct Highlight {
 #[derive(Debug)]
 pub struct DynamicText {
     pub position: CursorPos,
-    raw_text: Vec<Vec<char>>,
+    pub raw_text: Vec<Vec<char>>,
     pub highlight: Highlight, // Highlight beginning coordinate (start, end) (y, x)
 }
 
