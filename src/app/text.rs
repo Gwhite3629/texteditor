@@ -67,12 +67,16 @@ impl PartialEq for Coordinate {
 
 impl PartialOrd for Coordinate {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match (self.x.partial_cmp(&other.x), self.y.partial_cmp(&other.y)) {
-            (Some(Ordering::Equal), y_ord) => y_ord,
-            (x_ord, Some(Ordering::Equal)) => x_ord,
-            (Some(x_ord), Some(y_ord)) if x_ord == y_ord => Some(x_ord),
-            _ => None,
-        }
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for Coordinate {}
+
+impl Ord for Coordinate {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Compare y first. If they are equal, cmp() falls back to comparing x.
+        self.y.cmp(&other.y).then_with(|| self.x.cmp(&other.x))
     }
 }
 
@@ -138,28 +142,44 @@ impl CursorPos {
             true
         }
     }
-    fn left(&mut self) {
+    fn left(&mut self, prev_line_len: usize) {
         if self.can_move_left() {
             self.character -= 1;
             self.pos.x = self.character as u16;
+        } else if self.can_move_up() {
+            self.line_number -= 1;
+            self.max_character = prev_line_len + 1;
+            self.character = prev_line_len;
+            self.pos = Coordinate::from((self.character as u16, self.line_number as u16));
         }
     }
     fn down(&mut self) {
         if self.can_move_down() {
             self.line_number += 1;
             self.pos.y = self.line_number as u16;
+        } else if self.can_move_right() {
+            self.character = self.max_character - 1;
+            self.pos.x = self.character as u16;
         }
     }
     fn up(&mut self) {
         if self.can_move_up() {
             self.line_number -= 1;
             self.pos.y = self.line_number as u16;
+        } else if self.can_move_left() {
+            self.character = 0;
+            self.pos.x = self.character as u16;
         }
     }
-    fn right(&mut self) {
+    fn right(&mut self, next_line_len: usize) {
         if self.can_move_right() {
             self.character += 1;
             self.pos.x = self.character as u16;
+        } else if self.can_move_down() {
+            self.line_number += 1;
+            self.max_character = next_line_len + 1;
+            self.character = 0;
+            self.pos = Coordinate::from((self.character as u16, self.line_number as u16));
         }
     }
 
@@ -188,13 +208,6 @@ impl CursorPos {
             self.pos.x = self.character as u16;
         }
     }
-
-    pub fn null_highlight(&mut self) -> Highlight {
-        Highlight {
-            p1: Coordinate::from((self.character, self.line_number)),
-            p2: Coordinate::from((self.character, self.line_number)),
-        }
-    }
 }
 
 impl Highlight {
@@ -206,61 +219,40 @@ impl Highlight {
     }
 
     fn select_left(&mut self, cur: &CursorPos) {
-        if cur.pos > self.p1 {
-            return;
-        } else {
+        // Expand selection to the left
+        if self.p1 > cur.pos {
             self.p1 = cur.pos.clone();
+        } else if self.p2 > cur.pos {
+            self.p2 = cur.pos.clone();
         }
+        // Shrink selection from the right
     }
     fn select_down(&mut self, cur: &CursorPos) {
-        if cur.pos < self.p2 {
-            return;
-        } else {
+        // Expand selection downward
+        if self.p2 < cur.pos {
             self.p2 = cur.pos.clone();
+        } else if self.p1 < cur.pos {
+            self.p1 = cur.pos.clone();
         }
+        // Shrink selection from the top
     }
     fn select_up(&mut self, cur: &CursorPos) {
-        if cur.pos > self.p1 {
-            return;
-        } else {
+        // Expand selection upward
+        if self.p1 > cur.pos {
             self.p1 = cur.pos.clone();
+        } else if self.p2 > cur.pos {
+            self.p2 = cur.pos.clone();
         }
+        // Shrink selection from the bottom
     }
     fn select_right(&mut self, cur: &CursorPos) {
-        if cur.pos < self.p2 {
-            return;
-        } else {
+        // Expand selection to the right
+        if self.p2 < cur.pos {
             self.p2 = cur.pos.clone();
-        }
-    }
-
-    fn unselect_left(&mut self, cur: &CursorPos) {
-        if cur.pos > self.p2 {
-            return;
-        } else {
-            self.p2 = cur.pos.clone();
-        }
-    }
-    fn unselect_down(&mut self, cur: &CursorPos) {
-        if cur.pos < self.p1 {
-            return;
-        } else {
+        } else if self.p1 < cur.pos {
             self.p1 = cur.pos.clone();
         }
-    }
-    fn unselect_up(&mut self, cur: &CursorPos) {
-        if cur.pos > self.p2 {
-            return;
-        } else {
-            self.p2 = cur.pos.clone();
-        }
-    }
-    fn unselect_right(&mut self, cur: &CursorPos) {
-        if cur.pos < self.p1 {
-            return;
-        } else {
-            self.p1 = cur.pos.clone();
-        }
+        // Shrink selection from the left
     }
 }
 
@@ -278,7 +270,7 @@ impl DynamicText {
     pub fn pop(&mut self) -> Option<char> {
         if self.position.can_move_left() {
             let c = self.raw_text[self.position.line_number].remove(self.position.character - 1);
-            self.position.left();
+            self.position.left(0);
             self.position.max_character -= 1;
             return Some(c);
         } else if self.position.can_move_up() {
@@ -321,7 +313,7 @@ impl DynamicText {
         } else {
             self.raw_text[self.position.line_number].insert(self.position.character, c);
             self.position.max_character += 1;
-            self.position.right();
+            self.position.right(0);
         }
     }
 
@@ -336,7 +328,12 @@ impl DynamicText {
     }
 
     pub fn move_left(&mut self) {
-        self.position.left();
+        if self.position.can_move_up() {
+            self.position
+                .left(self.raw_text[self.position.line_number - 1].len());
+        } else {
+            self.position.left(0);
+        }
     }
     pub fn move_down(&mut self) {
         if self.position.can_move_down() {
@@ -353,7 +350,12 @@ impl DynamicText {
         self.position.up();
     }
     pub fn move_right(&mut self) {
-        self.position.right();
+        if self.position.can_move_down() {
+            self.position
+                .right(self.raw_text[self.position.line_number + 1].len());
+        } else {
+            self.position.right(0);
+        }
     }
 
     pub fn select_left(&mut self) {
@@ -373,20 +375,10 @@ impl DynamicText {
         self.highlight.select_right(&self.position);
     }
 
-    pub fn unselect_left(&mut self) {
-        self.move_left();
-        self.highlight.unselect_left(&self.position);
-    }
-    pub fn unselect_down(&mut self) {
-        self.move_down();
-        self.highlight.unselect_down(&self.position);
-    }
-    pub fn unselect_up(&mut self) {
-        self.move_up();
-        self.highlight.unselect_up(&self.position);
-    }
-    pub fn unselect_right(&mut self) {
-        self.move_right();
-        self.highlight.unselect_right(&self.position);
+    pub fn null_highlight(&mut self) {
+        self.highlight = Highlight {
+            p1: Coordinate::from((self.position.character, self.position.line_number)),
+            p2: Coordinate::from((self.position.character, self.position.line_number)),
+        }
     }
 }

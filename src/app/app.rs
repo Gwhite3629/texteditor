@@ -5,7 +5,7 @@ use color_eyre::{Result, eyre::WrapErr};
 
 use crate::app::{
     AppProperties,
-    AppState::{self, MOVE, MULTICOMMAND, SELECT, SIMPLECOMMAND, TEXT, UNSELECT},
+    AppState::{self, MOVE, MULTICOMMAND, SELECT, SIMPLECOMMAND, TEXT},
     DynamicText, highlight, insert,
     text::Coordinate,
 };
@@ -49,7 +49,7 @@ impl App {
         match key_event.code {
             KeyCode::Esc => {
                 highlight()?;
-                self.text.position.null_highlight();
+                self.text.null_highlight();
                 self.cmdbuf.clear();
                 self.status_text.clear();
                 self.status_text.push(Line::from("Command"));
@@ -59,7 +59,6 @@ impl App {
                 SIMPLECOMMAND => self.text.move_left(), // Move cursor left
                 MULTICOMMAND => self.cmdbuf.push(KeyCode::Char('h')), // Append 'h' to multi-command
                 SELECT => self.text.select_left(),      // Select to the left
-                UNSELECT => self.text.unselect_left(),  // Unselect to the left
                 MOVE => {}                              // Move selection to the left
                 TEXT => self.text.push('h'),            // Append 'h' to text
             },
@@ -67,7 +66,6 @@ impl App {
                 SIMPLECOMMAND => self.text.move_left(), // Move cursor left
                 MULTICOMMAND => {}                      // Append left arrow to command
                 SELECT => self.text.select_left(),      // Select to the left
-                UNSELECT => self.text.unselect_left(),  // Unselect to the left
                 MOVE => {}                              // Move selection to the left
                 TEXT => self.text.move_left(),          // Move cursor left
             },
@@ -75,7 +73,6 @@ impl App {
                 SIMPLECOMMAND => self.text.move_down(), // Move cursor down
                 MULTICOMMAND => self.cmdbuf.push(KeyCode::Char('j')), // Append 'j' to multi-command
                 SELECT => self.text.select_down(),      // Select to the down
-                UNSELECT => self.text.unselect_down(),  // Unselect to the down
                 MOVE => {}                              // Move selection to the down
                 TEXT => self.text.push('j'),            // Append 'j' to text
             },
@@ -83,7 +80,6 @@ impl App {
                 SIMPLECOMMAND => self.text.move_down(), // Move cursor down
                 MULTICOMMAND => {}                      // Append down arrow to command
                 SELECT => self.text.select_down(),      // Select to the down
-                UNSELECT => self.text.unselect_down(),  // Unselect to the down
                 MOVE => {}                              // Move selection to the down
                 TEXT => self.text.move_down(),          // Move cursor down
             }, // Move cursor down
@@ -91,7 +87,6 @@ impl App {
                 SIMPLECOMMAND => self.text.move_up(), // Move cursor up
                 MULTICOMMAND => self.cmdbuf.push(KeyCode::Char('k')), // Append 'k' to multi-command
                 SELECT => self.text.select_up(),      // Select to the up
-                UNSELECT => self.text.unselect_up(),  // Unselect to the up
                 MOVE => {}                            // Move selection to the up
                 TEXT => self.text.push('k'),          // Append 'k' to text
             },
@@ -99,7 +94,6 @@ impl App {
                 SIMPLECOMMAND => self.text.move_up(), // Move cursor up
                 MULTICOMMAND => {}                    // Append up arrow to command
                 SELECT => self.text.select_up(),      // Select to the up
-                UNSELECT => self.text.unselect_up(),  // Unselect to the up
                 MOVE => {}                            // Move selection to the up
                 TEXT => self.text.move_up(),          // Move cursor up
             }, // Move cursor up
@@ -107,7 +101,6 @@ impl App {
                 SIMPLECOMMAND => self.text.move_right(), // Move cursor right
                 MULTICOMMAND => self.cmdbuf.push(KeyCode::Char('l')), // Append 'l' to multi-command
                 SELECT => self.text.select_right(),      // Select to the right
-                UNSELECT => self.text.unselect_right(),  // Unselect to the right
                 MOVE => {}                               // Move selection to the right
                 TEXT => self.text.push('l'),             // Append 'l' to text
             },
@@ -115,7 +108,6 @@ impl App {
                 SIMPLECOMMAND => self.text.move_right(), // Move cursor right
                 MULTICOMMAND => {}                       // Append right arrow to command
                 SELECT => self.text.select_right(),      // Select to the right
-                UNSELECT => self.text.unselect_right(),  // Unselect to the right
                 MOVE => {}                               // Move selection to the right
                 TEXT => self.text.move_right(),          // Move cursor right
             }, // Move cursor right
@@ -136,6 +128,13 @@ impl App {
                 } // Go to move mode
             },
             KeyCode::Char('v') => match self.state {
+                SIMPLECOMMAND => {
+                    highlight()?;
+                    self.text.null_highlight();
+                    self.status_text.clear();
+                    self.status_text.push(Line::from("Select"));
+                    self.state = SELECT
+                }
                 MULTICOMMAND => self.cmdbuf.push(KeyCode::Char('v')), // Append 'v' to multi-command
                 TEXT => self.text.push('v'),                          // Append 'v' to text
                 _ => {
@@ -144,17 +143,6 @@ impl App {
                     self.status_text.push(Line::from("Select"));
                     self.state = SELECT
                 } // Enter select mode
-            },
-            KeyCode::Char('u') => match self.state {
-                SIMPLECOMMAND => {}                                   // Do nothing
-                MULTICOMMAND => self.cmdbuf.push(KeyCode::Char('u')), // Append 'u' to multi-command
-                TEXT => self.text.push('u'),                          // Append 'u' to text
-                _ => {
-                    highlight()?;
-                    self.status_text.clear();
-                    self.status_text.push(Line::from("UnSelect"));
-                    self.state = UNSELECT;
-                }
             },
             KeyCode::Char('e') => match self.state {
                 MULTICOMMAND => self.cmdbuf.push(KeyCode::Char('e')), // Append 'e' to multi-command
@@ -180,7 +168,6 @@ impl App {
                 SIMPLECOMMAND => {}                                   // Undo latest command
                 MULTICOMMAND => self.cmdbuf.push(KeyCode::Char('z')), // Append 'z' to multi-command
                 SELECT => {}                                          // Undo latest select
-                UNSELECT => {}                                        // Undo latest un-select
                 MOVE => {}                                            // Undo latest move
                 TEXT => self.text.push('z'),                          // Append 'z' to text
             },
@@ -193,14 +180,6 @@ impl App {
                         self.state = MULTICOMMAND;
                     } // Go to multi-command
                 },
-                ModifierKeyCode::LeftShift => match self.state {
-                    SELECT => {
-                        self.status_text.clear();
-                        self.status_text.push(Line::from("UnSelect"));
-                        self.state = UNSELECT;
-                    }
-                    _ => {} // Fall-through, capitalize next character
-                },
                 _ => {}
             },
             KeyCode::Enter => match self.state {
@@ -212,7 +191,6 @@ impl App {
                     self.handle_command()?
                 }
                 SELECT => {}                  // Do nothing
-                UNSELECT => {}                // Do nothing
                 MOVE => {}                    // Move selection down a newline
                 TEXT => self.text.push('\n'), // Enter newline character
             },

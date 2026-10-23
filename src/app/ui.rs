@@ -39,7 +39,16 @@ impl Widget for &App {
                             .to_string()
                             .as_str()
                         + " "
-                        + str.as_str(),
+                        + str.as_str()
+                        + format!(" {},{}", self.text.pos().x, self.text.pos().y).as_str()
+                        + format!(
+                            " |({},{})-({},{})|",
+                            self.text.highlight.p1.x,
+                            self.text.highlight.p1.y,
+                            self.text.highlight.p2.x,
+                            self.text.highlight.p2.y
+                        )
+                        .as_str(),
                 )
                 .left_aligned(),
             )
@@ -48,26 +57,47 @@ impl Widget for &App {
 
         let mut lines = Vec::new();
         for (i, mut l) in self.text.iter().enumerate() {
-            if i == self.text.highlight.p1.y as usize {
-                // Begin highlighting span
-                let (non, h) = l.split_at_mut(self.text.highlight.p1.x as usize);
-                lines.push(Line::from(vec![
-                    Span::styled(non.to_string(), Style::default()),
-                    Span::styled(h.to_string(), Style::default().fg(Color::Yellow)),
-                ]));
-                continue;
-            } else if i > self.text.highlight.p1.y as usize && i < self.text.highlight.p2.y as usize
-            {
-                lines.push(Line::from(vec![Span::styled(l, Style::default())]));
-                continue;
-            } else if i == self.text.highlight.p2.y as usize {
-                // Finishing line of highlighting span
-                let (h, non) = l.split_at_mut(self.text.highlight.p2.x as usize);
-                lines.push(Line::from(vec![
-                    Span::styled(h.to_string(), Style::default().fg(Color::Yellow)),
-                    Span::styled(non.to_string(), Style::default()),
-                ]));
-                continue;
+            if self.text.highlight.p1 != self.text.highlight.p2 {
+                if (i == self.text.highlight.p1.y as usize)
+                    & (self.text.highlight.p1.y == self.text.highlight.p2.y)
+                {
+                    // Highlight span that is less than an entire line long, requires 2 splits
+                    let (n1, t) = l.split_at_mut(self.text.highlight.p1.x as usize);
+                    let (h, n2) = t.split_at_mut(
+                        (self.text.highlight.p2.x - self.text.highlight.p1.x) as usize,
+                    );
+                    lines.push(Line::from(vec![
+                        Span::styled(n1.to_string(), Style::default()),
+                        Span::styled(h.to_string(), Style::default().fg(Color::Yellow)),
+                        Span::styled(n2.to_string(), Style::default()),
+                    ]));
+                    continue;
+                } else if i == self.text.highlight.p1.y as usize {
+                    // Begin highlighting span
+                    let (non, h) = l.split_at_mut(self.text.highlight.p1.x as usize);
+                    lines.push(Line::from(vec![
+                        Span::styled(non.to_string(), Style::default()),
+                        Span::styled(h.to_string(), Style::default().fg(Color::Yellow)),
+                    ]));
+                    continue;
+                } else if (i > self.text.highlight.p1.y as usize)
+                    & (i < self.text.highlight.p2.y as usize)
+                {
+                    // Middle lines of highlight span
+                    lines.push(Line::from(vec![Span::styled(
+                        l,
+                        Style::default().fg(Color::Yellow),
+                    )]));
+                    continue;
+                } else if i == self.text.highlight.p2.y as usize {
+                    // Finishing line of highlighting span
+                    let (h, non) = l.split_at_mut(self.text.highlight.p2.x as usize);
+                    lines.push(Line::from(vec![
+                        Span::styled(h.to_string(), Style::default().fg(Color::Yellow)),
+                        Span::styled(non.to_string(), Style::default()),
+                    ]));
+                    continue;
+                }
             }
             lines.push(Line::from(l));
         }

@@ -5,7 +5,6 @@ pub enum AppState {
     SIMPLECOMMAND,
     MULTICOMMAND,
     SELECT,
-    UNSELECT,
     MOVE,
     TEXT,
 }
