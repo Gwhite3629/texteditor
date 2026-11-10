@@ -267,6 +267,23 @@ impl DynamicText {
         }
     }
 
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.raw_text
+            .clone()
+            .into_iter()
+            .flat_map(|mut inner: Vec<char>| {
+                inner.push('\n');
+                let t: Vec<u8> = inner.into_iter().map(|c| c as u8).collect();
+                t
+            })
+            .collect()
+    }
+
+    pub fn to_string(&self) -> String {
+        let v = self.to_bytes();
+        String::from_utf8(v).unwrap()
+    }
+
     pub fn pop(&mut self) -> Option<char> {
         if self.position.can_move_left() {
             let c = self.raw_text[self.position.line_number].remove(self.position.character - 1);

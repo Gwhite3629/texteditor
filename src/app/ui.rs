@@ -111,7 +111,7 @@ impl Widget for &App {
     }
 }
 
-fn keycode_to_text(code: &KeyCode) -> String {
+pub fn keycode_to_text(code: &KeyCode) -> String {
     match code {
         KeyCode::Char(c) => c.to_string(),
         KeyCode::Enter => "\n".to_string(),

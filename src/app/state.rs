@@ -1,4 +1,4 @@
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 // Mutable state of app
 pub enum AppState {
     #[default]
@@ -7,15 +7,16 @@ pub enum AppState {
     SELECT,
     MOVE,
     TEXT,
+    SAVING,
 }
 
 #[derive(Debug, Default)]
 // Immutable state of app upon launch
 pub struct AppProperties {
-    rw: bool, // Is file open as read-only or write-able (1 is read only)
-    df: bool, // Generate diff file from initial state to final state (1 is generate diff)
-    ow: bool, // Overwrite original file with new file, if false then create new file (1 is create new file)
-    wb: bool, // Write-back enable. If true then write to final file on every save. If false then write to temp file and write to final on exit
+    pub rw: bool, // Is file open as read-only or write-able (1 is read only)
+    pub df: bool, // Generate diff file from initial state to final state on every write, only the final version of the diff is saved on close (1 is generate diff)
+    pub ow: bool, // Overwrite original file with new file, if false then create new file (1 is create new file)
+    pub wb: bool, // Write-back enable. If true then write to final file on every save. If false then write to temp file and write to final on exit
 }
 
 impl AppProperties {
